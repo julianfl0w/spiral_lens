@@ -10,7 +10,6 @@ import math
 import json
 
 here = os.path.dirname(os.path.abspath(__file__))
-print(sys.path)
 
 import requests
 

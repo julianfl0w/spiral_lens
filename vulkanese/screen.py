@@ -1,8 +1,10 @@
 # Window name in which image is displayed
+pass
+
 from screeninfo import get_monitors
 import cv2
 import sys
-import pygame
+#import pygame
 import sys
 import numpy as np
 from PIL import Image

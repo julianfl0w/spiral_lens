@@ -1,0 +1,61 @@
+#version 450
+
+#define HEIGHT 482
+#define WIDTH 621
+#define WORKGROUP_SIZE 32
+// This will be (or has been) replaced by constant definitions
+layout(std430, set = 0, binding = 0 ) buffer inputImage_buf
+{
+    vec4 inputImage[897966];
+};
+layout(std430, set = 0, binding = 1 ) buffer outputImage_buf
+{
+    vec4 outputImage[897966];
+};
+layout(std140, set = 1, binding = 0 ) uniform paramsBuffer_buf
+{
+   float width;
+float height;
+float scale;
+float rotationAngle;
+float translationX;
+float translationY;
+};
+// This will be (or has been) replaced by buffer definitions
+    
+layout (local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE, local_size_z = 1 ) in;
+
+void main() {
+    ivec2 gid = ivec2(gl_GlobalInvocationID.xy); // gid is the output pixel coordinate
+
+    // Apply the inverse translation
+    /*
+    vec2 coords = vec2(gid) - vec2(translationX, translationY);
+    
+    // Apply the inverse rotation
+    float cosAngle = cos(-rotationAngle); // Negate the angle for inverse rotation
+    float sinAngle = sin(-rotationAngle); // Negate the angle for inverse rotation
+    mat2 inverseRotationMatrix = mat2(cosAngle, sinAngle, -sinAngle, cosAngle);
+    //vec2 rotatedCoords = inverseRotationMatrix * (coords - vec2(width, height) * 0.5);
+    vec2 rotatedCoords = gid;
+
+    // Apply the inverse scaling
+    vec2 scaledCoords = rotatedCoords / scale;
+
+    // Transform back to pixel coordinates*/
+    ivec2 inputCoords;// = ivec2(scaledCoords + vec2(width, height) * 0.5);
+    inputCoords = gid;
+    int outIndex = int(gid.y * width + gid.x);
+
+    // Calculate the index based on inputCoords for reading from inputImage
+    if (gid.x >= 0 && gid.x < int(width) && gid.y >= 0 && gid.y < int(height)) {
+        int index = int(gid.y * width + gid.x);
+        // Read from the input buffer and write to the output at gid
+        outputImage[outIndex] = inputImage[index];
+    } else {
+        // If the transformed coordinates are out of bounds, fill with a default color
+        //outputImage[outIndex] = vec4(1.0); // Example: writing white color
+        outputImage[outIndex] = vec4(0.0);
+        //outputImage[outIndex] = inputImage[index];
+    }
+}

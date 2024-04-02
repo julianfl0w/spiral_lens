@@ -10,6 +10,7 @@ from . import shader
 from . import screen
 from . import math
 from . import image
+from . import vkimage
 from . import synchronization
 from . import examples
 from . import surface

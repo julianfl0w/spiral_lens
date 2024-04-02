@@ -9,7 +9,6 @@ import cv2
 import math
 
 here = os.path.dirname(os.path.abspath(__file__))
-print(sys.path)
 
 sys.path.append(os.path.join(here, "..", ".."))
 sys.path.append(os.path.join(here, "..", "..", "..", "sinode"))

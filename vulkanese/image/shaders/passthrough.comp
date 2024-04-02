@@ -1,0 +1,36 @@
+#version 450
+
+#define HEIGHT 482
+#define WIDTH 621
+#define WORKGROUP_SIZE 32
+// This will be (or has been) replaced by constant definitions
+layout(std430, set = 0, binding = 0 ) buffer inputImage_buf
+{
+    vec4 inputImage[897966];
+};
+layout(std430, set = 0, binding = 1 ) buffer outputImage_buf
+{
+    vec4 outputImage[897966];
+};
+layout(std140, set = 1, binding = 0 ) uniform paramsBuffer_buf
+{
+   float width;
+float height;
+float scale;
+float rotationAngle;
+float translationX;
+float translationY;
+};
+// This will be (or has been) replaced by buffer definitions
+    
+layout (local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE, local_size_z = 1 ) in;
+
+void main() {
+    ivec2 gid = ivec2(gl_GlobalInvocationID.xy); // Get the global ID of the thread
+
+    // Calculate the index based on gid
+    int index = gid.y * int(width) + gid.x;
+
+    // Directly pass the input to the output
+    outputImage[index] = inputImage[index];
+}

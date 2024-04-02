@@ -90,18 +90,27 @@ class DescriptorSet(sinode.Sinode):
                     else:
                         std = "std140"
 
-                BUFFERS_STRING += (
-                    f"layout({std}, set = {self.binding}, binding = {self.getBindingNumber(buffer)} ) "
-                    + f"{b}{buffer.name}_buf\n" + "{\n   "
-                    + buffer.qualifier
-                    + " "
-                    + buffer.memtype
-                    + " "
-                    + buffer.name
-                    + "["
-                    + str(int(buffer.sizeBytes / buffer.itemSizeBytes))
-                    + "];\n};\n"
-                )
+                if len(buffer.params):
+                    param_definitions = "\n".join([f"{v} {k};" for k, v in buffer.params.items()])
+                    BUFFERS_STRING += (
+                        f"layout({std}, set = {self.binding}, binding = {self.getBindingNumber(buffer)} ) "
+                        + f"{b}{buffer.name}_buf\n" + "{\n   "
+                        + param_definitions
+                        + "\n};\n"
+                    )
+                else:
+                    BUFFERS_STRING += (
+                        f"layout({std}, set = {self.binding}, binding = {self.getBindingNumber(buffer)} ) "
+                        + f"{b}{buffer.name}_buf\n" + "{\n   "
+                        + buffer.qualifier
+                        + " "
+                        + buffer.memtype
+                        + " "
+                        + buffer.name
+                        + "["
+                        + str(int(buffer.sizeBytes / buffer.itemSizeBytes))
+                        + "];\n};\n"
+                    )
 
         if hasattr(self, "DEBUG") and self.DEBUG:
             BUFFERS_STRING = self.addIndicesToOutputs(BUFFERS_STRING)
