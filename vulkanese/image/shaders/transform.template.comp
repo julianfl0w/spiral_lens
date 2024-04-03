@@ -3,39 +3,38 @@
 DEFINE_STRING// This will be (or has been) replaced by constant definitions
 BUFFERS_STRING// This will be (or has been) replaced by buffer definitions
     
-layout (local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE, local_size_z = 1 ) in;
+layout (local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = 1 ) in;
 
 void main() {
-    ivec2 gid = ivec2(gl_GlobalInvocationID.xy); // gid is the output pixel coordinate
-
-    // Apply the inverse translation
-    /*
-    vec2 coords = vec2(gid) - vec2(translationX, translationY);
     
-    // Apply the inverse rotation
-    float cosAngle = cos(-rotationAngle); // Negate the angle for inverse rotation
-    float sinAngle = sin(-rotationAngle); // Negate the angle for inverse rotation
-    mat2 inverseRotationMatrix = mat2(cosAngle, sinAngle, -sinAngle, cosAngle);
-    //vec2 rotatedCoords = inverseRotationMatrix * (coords - vec2(width, height) * 0.5);
-    vec2 rotatedCoords = gid;
-
-    // Apply the inverse scaling
-    vec2 scaledCoords = rotatedCoords / scale;
-
-    // Transform back to pixel coordinates*/
-    ivec2 inputCoords;// = ivec2(scaledCoords + vec2(width, height) * 0.5);
-    inputCoords = gid;
-    int outIndex = int(gid.y * width + gid.x);
-
-    // Calculate the index based on inputCoords for reading from inputImage
-    if (gid.x >= 0 && gid.x < int(width) && gid.y >= 0 && gid.y < int(height)) {
-        int index = int(gid.y * width + gid.x);
-        // Read from the input buffer and write to the output at gid
-        outputImage[outIndex] = inputImage[index];
-    } else {
-        // If the transformed coordinates are out of bounds, fill with a default color
-        //outputImage[outIndex] = vec4(1.0); // Example: writing white color
-        outputImage[outIndex] = vec4(0.0);
-        //outputImage[outIndex] = inputImage[index];
+    ivec2 gid = ivec2(gl_GlobalInvocationID.xy); // Get the global ID of the thread
+    if(gid.x >=width || gid.y>=height){
+        return;
     }
+    int dst_index = gid.y + int(gid.x *height);
+
+    // center the coordinates
+    vec2 centeredCoords = vec2(gid) - vec2(width, height) * 0.5;
+    vec2 scaledCoords = centeredCoords/vec2(scaleX, scaleY);
+
+    float cosAngle = cos(-rotationAngle); // Inverse rotation
+    float sinAngle = sin(-rotationAngle);
+    mat2 inverseRotationMatrix = mat2(cosAngle, sinAngle, -sinAngle, cosAngle);
+    vec2 rotatedCoords = inverseRotationMatrix * scaledCoords;
+
+    vec2 imageCenterCoords = rotatedCoords + vec2(width, height) * 0.5;
+    vec2 transformedCoords = imageCenterCoords + vec2(translationX, translationY); // Transform back to pixel coordinates
+
+    // Calculate the index based on gid
+    int src_index = int(transformedCoords.y + int(transformedCoords.x) *height);
+
+    // if the source is unsamplable, indicate black and return
+    if(transformedCoords.x >=width || transformedCoords.y >=height){
+        outputImage[dst_index] = vec4(0,0,transformedCoords.x,transformedCoords.y );
+        outputImage[dst_index] = vec4(0,0,0,0);
+        return;
+    }
+    // Directly pass the input to the output
+    outputImage[dst_index] = inputImage[src_index];
+
 }

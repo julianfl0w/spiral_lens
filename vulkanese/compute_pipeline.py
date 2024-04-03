@@ -29,7 +29,7 @@ class ComputePipeline(sinode.Sinode):
     def __init__(self, **kwargs):
         sinode.Sinode.__init__(self, **kwargs)
         # set the defaults here
-        self.proc_kwargs(
+        self.setDefaults(
             workgroupCount=[1, 1, 1],
             signalSemaphores=[],
             waitSemaphores=[],

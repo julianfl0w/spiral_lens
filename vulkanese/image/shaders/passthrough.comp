@@ -1,16 +1,14 @@
 #version 450
 
-#define HEIGHT 482
-#define WIDTH 621
-#define WORKGROUP_SIZE 32
+#define LOCAL_SIZE 16
 // This will be (or has been) replaced by constant definitions
-layout(std430, set = 0, binding = 0 ) buffer inputImage_buf
+layout(std140, set = 0, binding = 0 ) buffer inputImage_buf
 {
-    vec4 inputImage[897966];
+    vec4 inputImage[132];
 };
-layout(std430, set = 0, binding = 1 ) buffer outputImage_buf
+layout(std140, set = 0, binding = 1 ) buffer outputImage_buf
 {
-    vec4 outputImage[897966];
+    vec4 outputImage[132];
 };
 layout(std140, set = 1, binding = 0 ) uniform paramsBuffer_buf
 {
@@ -23,14 +21,27 @@ float translationY;
 };
 // This will be (or has been) replaced by buffer definitions
     
-layout (local_size_x = WORKGROUP_SIZE, local_size_y = WORKGROUP_SIZE, local_size_z = 1 ) in;
+layout (local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = 1 ) in;
 
 void main() {
+    
     ivec2 gid = ivec2(gl_GlobalInvocationID.xy); // Get the global ID of the thread
+    if(gid.x >=width || gid.y>=height){
+        return;
+    }
+    int dst_index = gid.y + int(gid.x *height);
 
+    float srcX = float(gid.x)/2.0;
     // Calculate the index based on gid
-    int index = gid.y * int(width) + gid.x;
+    int src_index = int(gid.y + int(srcX) *height);
 
+    // if the source is unsamplable, indicate black and return
+    if(srcX >=width || gid.y>=height){
+        outputImage[dst_index] = vec4(0,0,srcX,gid.y);
+        return;
+    }
     // Directly pass the input to the output
-    outputImage[index] = inputImage[index];
+    outputImage[dst_index] = inputImage[src_index];
+    outputImage[dst_index] = vec4(inputImage[src_index][0], inputImage[src_index][1], gid.x, gid.y);
+
 }

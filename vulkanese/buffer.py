@@ -101,6 +101,16 @@ class Buffer(sinode.Sinode):
 
         self.proc_kwargs(**kwargs)
 
+        if self.usage == vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT:
+            self.btype = "uniform "
+            self.std = "std140"
+        else:
+            self.btype = "buffer "
+            if self.compress:
+                self.std = "std430"
+            else:
+                self.std = "std140"
+
         self.device = self.fromAbove("device")
         self.device.buffers += [self]
         self.vkDevice = self.device.vkDevice
@@ -253,6 +263,8 @@ class Buffer(sinode.Sinode):
             )
         ):
             self.skipval = 1
+        elif self.memtype == "vec4":
+            self.skipval = 1
         elif (
             not self.usage & vk.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
             and not self.usage & vk.VK_BUFFER_USAGE_INDEX_BUFFER_BIT
@@ -293,6 +305,11 @@ class Buffer(sinode.Sinode):
         flatArray = np.frombuffer(self.pmap, self.pythonType)
         # because GLSL only allows 16-byte access,
         # we need to skip a few values in the memory
+
+        if self.memtype == "vec4":
+            #return flatArray.reshape(self.shape[1], self.shape[0], -1, order="C")
+            return flatArray.reshape(self.shape[0], self.shape[1], -1, order=order)
+
         if asComplex:
             rcvdArray = list(flatArray.astype(float))
             rcvdArrayReal = rcvdArray[::4]
@@ -320,6 +337,30 @@ class Buffer(sinode.Sinode):
                 indices = np.arange(0, len(flatArray), self.skipval).astype(int)
                 rcvdArray = np.array(flatArray[indices]).reshape(self.shape)
         return rcvdArray
+
+    def set(self, data, flush=True, order="C"):
+        # self.pmap[:] = data.astype(self.pythonType)
+
+        if len(self.pmap[:]) != np.prod(data.shape) * self.itemSizeBytes:
+            self.debug("WRONG SIZE")
+            self.debug("pmap (bytes): " + str(len(self.pmap[:])))
+            self.debug("SkipVal: " + str(self.skipval))
+            self.debug("item size (bytes): " + str(self.itemSizeBytes))
+            self.debug(self.sizeBytes)
+            self.debug("data (bytes): " + str(np.prod(data.shape) * self.itemSizeBytes))
+            raise Exception("Wrong Size")
+
+        if self.skipval == 1:
+            # self.pmap[:] = data.astype(self.pythonType).flatten()
+            self.pmap[:] = data.flatten(order=order)
+        else:
+            indices = np.arange(0, len(data), 1.0 / self.skipval).astype(int)
+            data = data[indices]
+            # print(self.pythonType)
+            self.pmap[:] = data.astype(self.pythonType).flatten(order=order)
+
+        if flush:
+            self.flush()
 
     def saveAsImage(self, height, width, path="mandelbrot.png"):
         # Get the color data from the buffer, and cast it to bytes.
@@ -414,29 +455,6 @@ class Buffer(sinode.Sinode):
         startByte = index * self.itemSizeBytes * self.skipval
         endByte = index * self.itemSizeBytes * self.skipval + self.itemSizeBytes
         return np.frombuffer(self.pmap[startByte:endByte], dtype=self.pythonType)
-
-    def set(self, data, flush=True):
-        # self.pmap[:] = data.astype(self.pythonType)
-
-        if len(self.pmap[:]) != np.prod(data.shape) * self.itemSizeBytes:
-            self.debug("WRONG SIZE")
-            self.debug("pmap (bytes): " + str(len(self.pmap[:])))
-            self.debug("item size (bytes): " + str(self.itemSizeBytes))
-            self.debug(self.sizeBytes)
-            self.debug("data (bytes): " + str(np.prod(data.shape) * self.itemSizeBytes))
-            raise Exception("Wrong Size")
-
-        if self.skipval == 1:
-            # self.pmap[:] = data.astype(self.pythonType).flatten()
-            self.pmap[:] = data.astype(self.pythonType).flatten()
-        else:
-            indices = np.arange(0, len(data), 1.0 / self.skipval).astype(int)
-            data = data[indices]
-            # print(self.pythonType)
-            self.pmap[:] = data.astype(self.pythonType).flatten()
-
-        if flush:
-            self.flush()
 
     def fill(self, value):
         # self.pmap[: data.size * data.itemSize] = data

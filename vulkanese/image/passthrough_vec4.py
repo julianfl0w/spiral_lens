@@ -43,7 +43,7 @@ class Transform(ve.shader.Shader):
             name="Transform",
             stage=vk.VK_SHADER_STAGE_COMPUTE_BIT,
             sourceFilename=os.path.join(
-                here, "shaders", "transform.template.comp"
+                here, "shaders", "passthrough.template.comp"
             ), 
             constantsDict=dict(
                 LOCAL_SIZE=16,  # Workgroup size in compute shader
@@ -126,102 +126,34 @@ def runDemo():
     instance_inst.DEBUG = False
     device = instance_inst.getDevice(0)
 
-    # Load or capture an input image...
-    # OPENCV objects are HEIGHT, WIDTH, CHANNELS for some reason
-    # Vk is WIDTH, HEIGHT, CHANNELS
-    input_img = cv2.imread("example.png", cv2.IMREAD_UNCHANGED)  # Example input image
-    input_img = np.transpose(input_img, (1, 0, 2))
-    input_img = input_img.astype(np.float32)/255.0
-    width = input_img.shape[0]
-    height = input_img.shape[1]
+    width = 11
+    height = 3
+    input_img = np.zeros((width, height, 4))
+    for x in range(width):
+        for y in range(height):
+            input_img[x,y] = np.array([x,y,0,0])
 
     # Create a Transform object
     transform = Transform(
         device=device, WIDTH=width, HEIGHT=height
     )
 
-    turns = 24.0
+    print(input_img)
+    # Run the transformation (example parameters)
+
     # Upload the input image to GPU
     transform.inputImage.set(input_img)
 
-    for i in range(int(turns)):
-        
-        # Run the transformation (example parameters)
-        output_img = transform.run(
-            #input_img, scale=1.0, rotation_angle=math.pi / 4, translation=[0.1, 0.1]
-            input_img, scale=[2.0,2.0], rotation_angle=math.pi * 2*  (i/turns), translation=[0,0]
-        )
-        #cv2.imshow('Output Image', np.transpose(output_img, (1,0,2)))
-        cv2.imshow('Output Image', output_img)
-        cv2.waitKey(1)
-
-        print(i)
-
-
-
-# Example usage
-def runWebcamDemo():
-
-    # device selection and instantiation
-    instance_inst = ve.instance.Instance(verbose=False)
-    instance_inst.DEBUG = False
-    device = instance_inst.getDevice(0)
-
-    # Initialize webcam
-    cap = cv2.VideoCapture(0)
-    
-    if not cap.isOpened():
-        print("Error: Could not open webcam")
-        return
-
-    ret, input_img = cap.read()
-    width = input_img.shape[1]
-    height = input_img.shape[0]
-
-    # Create a Transform object
-    transform = Transform(
-        device=device, WIDTH=width, HEIGHT=height
+    output_img = transform.run(
+        #input_img, scale=1.0, rotation_angle=math.pi / 4, translation=[0.1, 0.1]
+        input_img.flatten(), scale=[2.0,2.0], rotation_angle=0, translation=[0,0]
     )
-    turns=24
-    i=0
-    while(1):
-
-        # Read one frame from the webcam
-        ret, input_img = cap.read()
-
-        if not ret:
-            print("Error: Could not read frame from webcam")
-            cap.release()
-            return
-
-        # Process the captured frame...
-        # OpenCV captures in HEIGHT, WIDTH, CHANNELS format but we need WIDTH, HEIGHT, CHANNELS
-        input_img = input_img.astype(np.float32) / 255.0
-        # Convert BGR to BGRA by adding an alpha channel
-        input_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2BGRA)
-        input_img = np.transpose(input_img, (1, 0, 2))
-
-        # Upload the input image to GPU
-        #transform.inputImage.set(input_img)
-        input_img_bytes = input_img.tobytes()
-        transform.inputImage.pmap[0:len(input_img_bytes)] = input_img_bytes
-
-        i+=1
-        # Run the transformation with example parameters
-        output_img = transform.run(
-            input_img, scale=[2.0, 2.0], rotation_angle=math.pi * 2 * (i / turns), translation=[0, 0]
-        )
-        
-        # Display the transformed image
-        cv2.imshow('Output Image', cv2.resize(output_img, (int(height/4), int(width/4))))
-        cv2.waitKey(1)
-
-    # Close all OpenCV windows
-    cv2.destroyAllWindows()
-    # Close the webcam
-    cap.release()
-
-
+    print(output_img.shape)
+    length = np.prod(output_img.shape)
+    print(output_img.dtype)
+    print(output_img)
+    cv2.imshow('Output Image', np.transpose(output_img, (1,0,2)))
+    cv2.waitKey(0)
 
 if __name__ == "__main__":
-    runWebcamDemo()
+    runDemo()

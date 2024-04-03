@@ -73,35 +73,26 @@ class DescriptorSet(sinode.Sinode):
         for buffer in self.buffers:
             if (
                 self.fromAbove("stage") == vk.VK_SHADER_STAGE_FRAGMENT_BIT
-                and b.name == "fragColor"
+                and buffer.name == "fragColor"
             ):
                 buffer.qualifier = "in"
 
             if self.fromAbove("stage") != vk.VK_SHADER_STAGE_COMPUTE_BIT:
-                BUFFERS_STRING += b.getDeclaration(descSet=self.descriptorSet)
+                BUFFERS_STRING += buffer.getDeclaration(descSet=self.descriptorSet)
             else:
-                if buffer.usage == vk.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT:
-                    b = "uniform "
-                    std = "std140"
-                else:
-                    b = "buffer "
-                    if buffer.compress:
-                        std = "std430"
-                    else:
-                        std = "std140"
 
                 if len(buffer.params):
                     param_definitions = "\n".join([f"{v} {k};" for k, v in buffer.params.items()])
                     BUFFERS_STRING += (
-                        f"layout({std}, set = {self.binding}, binding = {self.getBindingNumber(buffer)} ) "
-                        + f"{b}{buffer.name}_buf\n" + "{\n   "
+                        f"layout({buffer.std}, set = {self.binding}, binding = {self.getBindingNumber(buffer)} ) "
+                        + f"{buffer.btype}{buffer.name}_buf\n" + "{\n   "
                         + param_definitions
                         + "\n};\n"
                     )
                 else:
                     BUFFERS_STRING += (
-                        f"layout({std}, set = {self.binding}, binding = {self.getBindingNumber(buffer)} ) "
-                        + f"{b}{buffer.name}_buf\n" + "{\n   "
+                        f"layout({buffer.std}, set = {self.binding}, binding = {self.getBindingNumber(buffer)} ) "
+                        + f"{buffer.btype}{buffer.name}_buf\n" + "{\n   "
                         + buffer.qualifier
                         + " "
                         + buffer.memtype
